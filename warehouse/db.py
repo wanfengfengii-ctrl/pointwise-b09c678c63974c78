@@ -27,6 +27,12 @@ CREATE TABLE IF NOT EXISTS receipts(
  operation TEXT NOT NULL, request_id TEXT NOT NULL,
  fingerprint TEXT NOT NULL, response TEXT NOT NULL,
  PRIMARY KEY(operation,request_id));
+CREATE TABLE IF NOT EXISTS certificates(
+ writer_id INTEGER NOT NULL REFERENCES schemas,
+ reader_id INTEGER NOT NULL REFERENCES schemas,
+ safe INTEGER NOT NULL CHECK(safe IN (0,1)),
+ witness TEXT NOT NULL,
+ PRIMARY KEY(writer_id,reader_id));
 CREATE TRIGGER IF NOT EXISTS immutable_schema BEFORE UPDATE ON schemas
  BEGIN SELECT RAISE(ABORT,'immutable schema'); END;
 CREATE TRIGGER IF NOT EXISTS immutable_batch BEFORE UPDATE ON batches

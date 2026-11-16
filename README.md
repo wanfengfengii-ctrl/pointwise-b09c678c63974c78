@@ -45,6 +45,29 @@ record name equals an earlier version. Batches keep their writer IDs; jobs keep
 their reader IDs and ordered input lists. No "latest schema" lookup occurs during
 job execution. Duplicate batch references intentionally duplicate output rows.
 
+## Compatibility certificates and certified jobs
+
+`w.certify(writer_id, reader_id)` analyses the complete finite value domain of
+the exact registered writer/reader version pair and persists a four-key
+certificate `{writer_id, reader_id, safe, witness}`. It is safe when every value
+the original SDK1 encoder accepts for the writer is parsed successfully by the
+original `legacy.resolve` for the reader; a writer with no finite encodable value
+is safe. An unsafe certificate carries a real input witness that SDK1 encodes and
+that makes the original resolver raise `ResolutionError` (the witness itself may
+be `None`). `w.get_certificate(writer_id, reader_id)` returns the stored
+certificate or `None`; unknown IDs raise `NotFound`. The decision is a fixpoint
+analysis over the schema node graph, not sample or fixed-depth enumeration.
+
+`w.create_certified_job(job_id, batch_ids, reader_id, request_id)` binds a job
+only when every actual batch's fixed writer version has a `safe=True`
+certificate against exactly that reader version; empty batches are checked too,
+while an empty input list needs no certificate. Missing or unsafe certificates
+raise `ValueError` without leaving a job or receipt. Certified requests use their
+own `certified_job` receipt domain but share the `job_id` identity space with
+ordinary jobs; certified jobs reuse the existing `binding`, `run_job` and
+`get_result`. See CERTIFICATION.md and HANDOFF.md for the exact semantics and
+termination argument.
+
 ## Business components
 
 - `warehouse/schemas.py`: schema validation, named environments and registration.
@@ -53,6 +76,8 @@ job execution. Duplicate batch references intentionally duplicate output rows.
 - `warehouse/results.py`: atomic terminal results and stable queries.
 - `warehouse/db.py`: SQLite schema, transactions and maintenance-window boundaries.
 - `warehouse/legacy.py`: the normal SDK1 writer-to-reader resolution entry.
+- `warehouse/certification.py`: exact finite-domain compatibility analysis.
+- `warehouse/certified.py`: version-pair certificates and certified job bindings.
 - `vendor/sdk1.py`, `vendor/sdk2.py`: offline same-schema codec ports.
 
 The SDK2 port is available independently for explicit same-schema reads and
